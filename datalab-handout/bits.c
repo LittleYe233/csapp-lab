@@ -166,9 +166,12 @@ int isTmax(int x) {
   /*
    * (1) Tmax + 1 == Tmin;
    * (2) The least (n-1) bits of Tmax is 1, while only the highest bit of Tmin
-   * is 1.
+   * is 1;
+   * (3) Use XOR instead of OR to pass the test of -2 (0xFFFFFFFE);
+   * (4) Add !!t check to pass the test of -1 (0xFFFFFFFF).
    */
-  return !(~(x | (x + 1)));
+  int t = x + 1;
+  return !!t & !(~(x ^ t));
 }
 /* 
  * allOddBits - return 1 if all odd-numbered bits in word set to 1
@@ -206,19 +209,20 @@ int negate(int x) {
  */
 int isAsciiDigit(int x) {
   /*
-   * (1) x is an ASCII digit i.i.f.
+   * (1) x is an ASCII digit iff.
    *     (a) Bit[7,6,3] = 0, Bit[5,4] = 1; or
    *     (b) Bit[7,6,2,1] = 0, Bit[5,4,3] = 1.
    * (2) (A == 0 && B == 0) == !(A | B).
    * (3) Specified bits are zeros: !(x & mask).
    * (4) Specified bits are ones: !((~x) & mask).
+   * (5) You should consider the numbers out of range [0, 256)!
    */
   int t = ~x;
   int A = x & 0xC8;
   int B = t & 0x30;
   int C = x & 0xC6;
   int D = t & 0x38;
-  return (!(A | B)) | (!(C | D));
+  return (!(x >> 8)) & ((!(A | B)) | (!(C | D)));
 }
 /* 
  * conditional - same as x ? y : z 
@@ -246,13 +250,21 @@ int conditional(int x, int y, int z) {
 int isLessOrEqual(int x, int y) {
   /*
    * (1) t == x - y;
-   * (2) A == 0 i.i.f. there is no 1 in t's bits except the sign bit;
-   * (3) B == 0 i.i.f. the sign bit of t is 0.
+   * (2) x <= y iff.
+   *     (a) signs of x and y differ (sx ^ sy) and sx == 1, or
+   *     (b) t <= 0;
+   * (3) Should AND 1 when check sign bits.
    */
+  // Extract sign bits
+  int sx = (x >> 31) & 1;
+  int sy = (y >> 31) & 1;
+  // Now assume that there won't be any overflow
   int t = x + ((~y) + 1);
-  int A = t & (~(1 << 31));
-  int B = t >> 31;
-  return !A | !!B;
+  int st = (t >> 31) & 1;
+  // Check whether t is zero (1) or not (0)
+  int z = !t;
+  int d = sx ^ sy;
+  return (d & sx) | ((~d) & (z | st));
 }
 //4
 /* 
@@ -284,15 +296,11 @@ int howManyBits(int x) {
    * to important code pieces below.
    */
 
-  // Check whether x is zero (1) or not (0)
-  int z = !(x ^ 0);
-
-  // Get sign bit
+  // Get sign bit, but it becomes -1 when x is negative
   int s = x >> 31;
 
-  // Get absolute value of x (gets x i.i.f. s == 1, while the two's complement
-  // of an negative value is its bit-negation plus 1
-  unsigned int a = (x ^ s) + (s & 1);
+  // Get absolute value of x
+  unsigned int a = (x ^ s) + (~s + 1);
 
   // Check whether x is negative (1) or not (0)
   int e = s & 1;
@@ -300,14 +308,19 @@ int howManyBits(int x) {
   // Check whether a is a power of two (1) or not (0)
   int w = !(a & (a - 1)) & !!a;
 
+  // Check whether x is Tmin (1) or not (0)
+  //int i = e & !(x & ~(1 << 31));
+  // Refer to conditional()
+  //int k = (!i) + (~0);
+
   // Binary search of MSB
   // n denotes whether the searching segment is non-zero (1) or not (0)
   // m is 2^n if n == 1, otherwise 0
   int t, b = 0, n, m;
 
   /// Search in most/least 16 bits
-  t = a >> 16;
-  n = !(t ^ 0);
+  t = (a >> 16) & (~(0xFF << 16)) & (~(0xFF << 24));
+  n = !!t;
   m = n << 4;
   b += m;
   //// Shift the absolute value if m>0 (MSB is in the higher segment), otherwise
@@ -316,28 +329,28 @@ int howManyBits(int x) {
 
   /// Search in most/least 8 bits in the previous segment
   t = a >> 8;
-  n = !(t ^ 0);
+  n = !!t;
   m = n << 3;
   b += m;
   a >>= m;
 
   /// Search in most/least 4 bits in the previous segment
   t = a >> 4;
-  n = !(t ^ 0);
+  n = !!t;
   m = n << 2;
   b += m;
   a >>= m;
 
   /// Search in most/least 2 bits in the previous segment
   t = a >> 2;
-  n = !(t ^ 0);
+  n = !!t;
   m = n << 1;
   b += m;
   a >>= m;
 
   /// Search in most/least 1 bit in the previous segment
   t = a >> 1;
-  n = !(t ^ 0);
+  n = !!t;
   m = n;
   b += m;
   a >>= m;
@@ -352,6 +365,9 @@ int howManyBits(int x) {
   // b should substract 1 if absolute value of x is a power of two and x is
   // negative
   b += (~(e & w) + 1);
+
+  // Final special case for Tmin
+  //b = (k & 32) | (~k & b);
 
   return b;
 }
@@ -369,16 +385,23 @@ int howManyBits(int x) {
  */
 unsigned floatScale2(unsigned uf) {
   // Mantissa part (23 bits in total)
-  unsigned m = uf & (~(0xFF << 23)) & (~(1 << 31));
+  int k = ~(0xFF << 23);
+  unsigned m = uf & k & (~(1 << 31));
   // Exponent part (8 bits in total)
   unsigned e = (uf >> 23) & 0xFF;
-  // Sign part (1 bit in total)
-  //int s = uf >> 31;
-  // Check whether uf is NaN or not
-  if (!(~e) && m) {}
-  else {
-    e += 1;
-    uf = uf & (~(0xFF << 23)) | (e << 23);
+  // Extract sign bit
+  int s = (uf >> 31) & 1;
+  // Check whether uf is NaN/infinty or not
+  // You should AND 0xFF mask here because e is a 32-bit integer
+  if ((~e) & 0xFF) {
+    // Check whether uf is normalized or not
+    if (e) {
+      e += 1;
+      uf = (uf & k) | (e << 23);
+    } else {
+      m <<= 1;
+      uf = (s << 31) | m;
+    }
   }
   return uf;
 }
