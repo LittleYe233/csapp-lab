@@ -51,3 +51,31 @@ For the first number should be 0x01, it is obvious that the solution of this pha
 
 - Solution: `1 2 4 8 16 32`
 
+## Phase 3
+
+- Address of `phase_3()`: 0000000000400f43
+
+This phase is quite easy! A lot of `jmp` to the same address and the denotion of `*0x402470(,%rax,8)` may be confusing, but the potential difficulty is far easier than that of the prior one I think.
+
+It calls `sscanf()` to read two 32-bit signed integers (whose format string is `%d %d`) from the input string, and check whether the first number is greater than 0x07 or not - if so, boom! Then the instruction at 0x400f75 calculates the value of `*0x402470(,%rax,8)`, which is identical to `0x402470 + *(%rax) * 8`, an offset of %rax scaled to 8 to base address 0x402470, and jumps to the resulting address. For %rax is not greater than 8 (and not negative as we think), we only need to dig out the first 8 gigawords (64-bit) starting at it:
+
+```text
+(gdb) x/16wx 0x402470
+0x402470:       0x00400f7c      0x00000000      0x00400fb9      0x00000000
+0x402480:       0x00400f83      0x00000000      0x00400f8a      0x00000000
+0x402490:       0x00400f91      0x00000000      0x00400f98      0x00000000
+0x4024a0:       0x00400f9f      0x00000000      0x00400fa6      0x00000000
+```
+
+It is clear to know the exact target address we should go to according to our given first number. Next, it always jumps to a `mov` instruction to set a certain value to %eax, jumping again to 0x400fbe, which leads to a final `cmp` with the second number (0xc(%rsp)) from the input string. The certain values are shown in the dumped assembly, so we can quickly get 8 possible input strings.
+
+- Solution:
+  - `0 207`
+  - `1 311`
+  - `2 707`
+  - `3 256`
+  - `4 389`
+  - `5 206`
+  - `6 682`
+  - `7 327`
+
