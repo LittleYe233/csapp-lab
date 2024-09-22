@@ -147,3 +147,35 @@ What's more, by a stroke of good luck, I got this answer with an extremely ridic
 
 - Solution: `9?>567` (**not unique**)
 
+## Phase 6
+
+- Address of `phase_6()`: 00000000004010f4
+
+I can't say anything... on this phase. It is the longest, most complicated (too many nested loops!), even comprising with a linked list (you can find some clues on it, but I failed)!
+
+It is my poor understanding on assembly and coding that I ascribe to the failure of this time. What's worse, I am not good at English, so I can't give a detailed explanation about the solution. I can only provide some rough steps:
+
+1. Read six integers from the input string;
+2. Check if **ALL** the six numbers are less than 7 **AND** do **NOT** equal with each other;
+3. Substract 7 with these numbers in-place;
+4. Some obscure instructions to handle with the addresses of linked-list nodes (you can try to search `<node1>` in the dumped assembly); [^1]
+5. Make sure that the value of one node is greater than that of its next node.
+
+So where are the nodes? Well, when you continuously watch the registers, you may find some addresses shown frequently: 0x6032d0~0x603320. Check them:
+
+```text
+(gdb) x/24wx 0x6032d0
+0x6032d0 <node1>:       0x0000014c      0x00000001      0x006032e0      0x00000000
+0x6032e0 <node2>:       0x000000a8      0x00000002      0x006032f0      0x00000000
+0x6032f0 <node3>:       0x0000039c      0x00000003      0x00603300      0x00000000
+0x603300 <node4>:       0x000002b3      0x00000004      0x00603310      0x00000000
+0x603310 <node5>:       0x000001dd      0x00000005      0x00603320      0x00000000
+0x603320 <node6>:       0x000001bb      0x00000006      0x00000000      0x00000000
+```
+
+They are pre-defined global variables. Such as 0x14c, 0xa8 are the values. Our goal is to re-order them descendingly. The order should be 3, 4, 5, 6, 1, 2. But there is an operation of substraction before, so the input string should be "4 3 2 1 6 5".
+
+- Solution: `4 3 2 1 6 5`
+
+[^1] I was inspired by Viseator from his/her [blog](https://www.viseator.com/2017/06/21/CS_APP_BombLab).
+
