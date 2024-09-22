@@ -122,3 +122,28 @@ Also, we can find that the second number from the original input string isn't mo
 
 - Solution: `7 0` **(may be not unique)**
 
+## Phase 5
+
+- Address of `phase_5()`: 0000000000401062
+
+This phase is much more challenging than I thought! I felt very stressed and confused when looking at the assembly, which contains many unfamiliar registers and abstract (?) instructions. However, I finally managed to succeed and formed a rough understanding of `phase_5()`.
+
+Here is the rough sketch of it:
+
+1. Do something confusing, but finally set %eax to 0 (because of instruction at 0x401078); check if the length of input string is 6:
+   - If so, go to next step (in fact it jumps to the rear, reset %eax and jumps back; why did the compiler do so?);
+   - If not, explosion!
+2. Get the first character of the input string, mask its ASCII with 0xF (that is, modulo 16), regarded as the offset of a base string located at 0x4024b0;
+3. Jump to step 2 and loop until all six final characters are extracted from the base;
+4. Compare another reference string at 0x40245e with it:
+   - If equal, do some cleaning and (mostly) defused!
+   - If not equal, you know the outcome, right?
+
+The base string is "maduiersnfotvbylSo you think you can stop the bomb with ctrl-c, do you?", while the reference is "flyers". The reference characters are in the base with indices 9, 15, 14, 5, 6, 7 (starting with 0), respectively, hence we only need to give an input string that ASCII of every character modulos 16 equals the indices. For example, `9?>567` (starting with '0' whose ASCII is 0x30).
+
+To be honest, I can't figure out the instructions from 0x4010de to 0x4010e9. They seem to be a stack check, but I don't know why it should be here.
+
+What's more, by a stroke of good luck, I got this answer with an extremely ridiculous misunderstanding: I had attempted "012345" as the input string and run the debugger, getting the final string "maduie", just the same as the first six characters of the base string. So I thought it calculated the offset by substracting the ASCII with '0' (0x30). Were the ASCII of '0' not end with 4 bits of zeros, probably I wouldn't have solved this phase.
+
+- Solution: `9?>567` (**not unique**)
+
