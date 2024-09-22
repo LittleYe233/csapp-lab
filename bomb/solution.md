@@ -177,5 +177,95 @@ They are pre-defined global variables. Such as 0x14c, 0xa8 are the values. Our g
 
 - Solution: `4 3 2 1 6 5`
 
+## Secret Phase
+
+What...? There is still something left? In fact I have ignored it either, until I found the explanation of this blog[^1]. At end of `main()` of bomb.c is a piece of comment:
+
+```c
+/* Wow, they got it! But isn’t something… missing? Perhaps
+ * something they overlooked? Mua ha ha ha ha! */
+```
+
+It implies the existence of a "secret phase", which will be covered by this section. When we try to search for all symbols named with "phase", we will notice one `secret_phase` at 0000000000401242 that is called by `phase_defused()`. But it needs other requirements to be executed:
+
+- There are six strings in the input buffer (the bomb stores the whole input of ours to a string array); and
+- the fourth input (for Phase 4) has three parameters (there is an `sscanf()` in the middle of `phase_defused()` whose format string is "%d %d %s"); and
+- the third parameter is "DrEvil" (located at 0x402622).
+
+If we do so and all the six inputs are correct, the bomb will print another two lines of message, meaning that the final secret phase has begun!
+
+Next, continue to check its code. It is quite simpler than your thought, isn't it? It calls `strtol()` to convert your input string into a decimal (base 10) number, compares it with 0x3e8, calls `fun7(0x6030f0)` and expects a return value of 0x2. Either an input greater than 0x3e9 (mention the instruction 0x40125d) or an unexpected return value fuses the bomb. Quite easy. Then take a look of `fun7()`!
+
+`fun7()` is short as well, but there is a latent trap inside:
+
+1. Check if %rdi (the argument of this function) is zero:
+   - If so, return 0xFFFFFFFF (-1);
+   - If not, go next;
+2. Check if %esi (our input of `secret_phase()`) is not less than %edx (the **pointed** value of %rdi):
+   - If so, go next;
+   - If not, return `2 * fun7(%rdi + 0x8)`;
+3. Set %eax (the return value) to 0, check if %esi equals to %edx:
+   - If so, return with the current %eax (that is, zero);
+   - If not, return `1 + 2 * fun7(%rdi + 0x10)`.
+
+It is recursive, which is annoying for novice programmers. So the pointer is the address 0x6030f0. Have a look at it:
+
+```text
+(gdb) x/120dx 0x00000000006030f0
+0x6030f0 <n1>:  0x00000024      0x00000000      0x00603110      0x00000000
+0x603100 <n1+16>:       0x00603130      0x00000000      0x00000000      0x00000000
+0x603110 <n21>: 0x00000008      0x00000000      0x00603190      0x00000000
+0x603120 <n21+16>:      0x00603150      0x00000000      0x00000000      0x00000000
+0x603130 <n22>: 0x00000032      0x00000000      0x00603170      0x00000000
+0x603140 <n22+16>:      0x006031b0      0x00000000      0x00000000      0x00000000
+0x603150 <n32>: 0x00000016      0x00000000      0x00603270      0x00000000
+0x603160 <n32+16>:      0x00603230      0x00000000      0x00000000      0x00000000
+0x603170 <n33>: 0x0000002d      0x00000000      0x006031d0      0x00000000
+0x603180 <n33+16>:      0x00603290      0x00000000      0x00000000      0x00000000
+0x603190 <n31>: 0x00000006      0x00000000      0x006031f0      0x00000000
+0x6031a0 <n31+16>:      0x00603250      0x00000000      0x00000000      0x00000000
+0x6031b0 <n34>: 0x0000006b      0x00000000      0x00603210      0x00000000
+0x6031c0 <n34+16>:      0x006032b0      0x00000000      0x00000000      0x00000000
+0x6031d0 <n45>: 0x00000028      0x00000000      0x00000000      0x00000000
+0x6031e0 <n45+16>:      0x00000000      0x00000000      0x00000000      0x00000000
+0x6031f0 <n41>: 0x00000001      0x00000000      0x00000000      0x00000000
+0x603200 <n41+16>:      0x00000000      0x00000000      0x00000000      0x00000000
+0x603210 <n47>: 0x00000063      0x00000000      0x00000000      0x00000000
+0x603220 <n47+16>:      0x00000000      0x00000000      0x00000000      0x00000000
+0x603230 <n44>: 0x00000023      0x00000000      0x00000000      0x00000000
+0x603240 <n44+16>:      0x00000000      0x00000000      0x00000000      0x00000000
+0x603250 <n42>: 0x00000007      0x00000000      0x00000000      0x00000000
+0x603260 <n42+16>:      0x00000000      0x00000000      0x00000000      0x00000000
+0x603270 <n43>: 0x00000014      0x00000000      0x00000000      0x00000000
+0x603280 <n43+16>:      0x00000000      0x00000000      0x00000000      0x00000000
+0x603290 <n46>: 0x0000002f      0x00000000      0x00000000      0x00000000
+0x6032a0 <n46+16>:      0x00000000      0x00000000      0x00000000      0x00000000
+0x6032b0 <n48>: 0x000003e9      0x00000000      0x00000000      0x00000000
+0x6032c0 <n48+16>:      0x00000000      0x00000000      0x00000000      0x00000000
+```
+
+To be empirical (from the experience of the linked list!), we guess that these n1 to n48 are nodes of a binary tree - the first 32-bit integer is its value, the third is the addresss to the left child, and the fifth the right one. The branches of `fun7()` are just selection of which child is the argument of inner function. Here may be several approaches, but I choosed to brute force. Quickly I got the final (and unique?) answer: 0x16 (22). The route of node selection is: 0x6030f0 -> 0x603110 -> 0x603150.
+
+- Solution: `22`
+
+## Short Review of This Lab
+
+I am almost new to assembly and processor architecture, even lacking knowledge of registers (like %eax, %edx, %esi) until several days before (at that time I tried some RISC-V assembly on microcontrollers for the first time). I found x86 assembly is quite harder than RISC-V, so I still put enormous effort into it.
+
+This lab, from my perspective, comprises a lot of knowledge of programming, foundation of assembly language, function and data structures, which helps me realize my weaknesses of computer science. Also I haven't master GDB and other tools like reverse engineering (I mean decompilers), hence I feel difficult to adapt to debugging.
+
+Certainly it is *very* challenging, no, **exceedingly**, **tremendously** lol. However, it is its high difficulty that makes me excited and arouses my enthusiasm and energy of continuously learning computer science. I think that my two-day high intensity of working pays off.
+
+At last, I sincerely hope you can enjoy this lab, and I believe you can.
+
+## An Easter Egg
+
+If you press Ctrl+C to send SIGINT to the binary bomb when it awaits your input from STDIN, it will show a short message and exits:
+
+```text
+So you think you can stop the bomb with ctrl-c, do you?
+Well...OK. :-)
+```
+
 [^1] I was inspired by Viseator from his/her [blog](https://www.viseator.com/2017/06/21/CS_APP_BombLab).
 
