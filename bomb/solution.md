@@ -79,3 +79,46 @@ It is clear to know the exact target address we should go to according to our gi
   - `6 682`
   - `7 327`
 
+## Phase 4
+
+- Address of `phase_4()`: 000000000040100c
+
+This time we will encounter another function called `func4` (at 0000000000400fce) to be tackled with. Now let's look into the structure of `phase_4()` first:
+
+1. Read two integers by `sscanf()` from the input string and store them in the stack;
+2. Check if the first input is not greater than 0xe:
+   - If so: go next;
+   - If not: boom!
+3. Call `func4(<first input>, 0, 0xe)`;
+4. Check if the return value is 0 **AND** the second input is 0:
+   - If so: you have defused this phase of binary bomb!
+   - If not: boom certainly!
+
+So we only need to manage the `func4()` to return a zero, unless it modifies the value of 0xc(%rsp) (of course it is bound to the second input).
+
+And here is the structure of `func4()` (the three original arguments are denoted as "1st", "2nd", "3rd"):
+
+1. Set %eax to `(3rd - 2nd + ((3rd - 2nd) >> 31)) >> 1` (the former shift right is **logical**, while the latter is **arithmetic**);
+2. Set %ecx to `%rax + 2nd`;
+3. Check if %ecx <= 1st:
+   - If so, go to subroutine 1:
+     1. Set %eax to 0;
+     2. Check if %ecx >= 1st:
+        - If so, jump to the end;
+        - If not, go to subroutine 3;
+     3. Set 2nd to `%rcx + 1`;
+     4. Call itself;
+     5. Set %eax to `%eax * 2 + 1`;
+     6. Jump to the end;
+   - If not, go to step 4;
+4. Set 3rd to `%rcx - 1`;
+5. Call itself (recursion!);
+6. Multiply %eax with 2;
+7. Jump to the end.
+
+Emm, a bit hard! In fact I don't know if I find all the solutions of this phase, but if we delve into it carefully we will find a shortest path to reach the goal: **to make both of the comparisons TRUE!** If so, we will get a return value with zero between the two checks (Step 3 and Step 3.2) and get to the end happily and safely. To do so, we need to make sure that %ecx == 1st, that is `((((3rd - 2nd) >> 31) + 3rd - 2nd) >> 1) + 2nd == 1st`. The left hand statement equals to 7 due to the fixed values of 2nd (0) and 3rd (0xe), so just set 1st to 7 before calling `func4()` in `phase_4()`.
+
+Also, we can find that the second number from the original input string isn't modified in `func4()`, hence we get the final value of it.
+
+- Solution: `7 0` **(may be not unique)**
+
