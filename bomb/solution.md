@@ -139,7 +139,7 @@ Here is the rough sketch of it:
    - If equal, do some cleaning and (mostly) defused!
    - If not equal, you know the outcome, right?
 
-The base string is "maduiersnfotvbylSo you think you can stop the bomb with ctrl-c, do you?", while the reference is "flyers". The reference characters are in the base with indices 9, 15, 14, 5, 6, 7 (starting with 0), respectively, hence we only need to give an input string that ASCII of every character modulos 16 equals the indices. For example, `9?>567` (starting with '0' whose ASCII is 0x30).
+The base string is "maduiersnfotvbylSo you think you can stop the bomb with ctrl-c, do you?" *(you will quickly know why there is an unusual questioning sentence here...)*, while the reference is "flyers". The reference characters are in the base with indices 9, 15, 14, 5, 6, 7 (starting with 0), respectively, hence we only need to give an input string that ASCII of every character modulos 16 equals the indices. For example, `9?>567` (starting with '0' whose ASCII is 0x30).
 
 To be honest, I can't figure out the instructions from 0x4010de to 0x4010e9. They seem to be a stack check, but I don't know why it should be here.
 
