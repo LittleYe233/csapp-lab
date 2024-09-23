@@ -8,3 +8,4 @@ sim/misc/lex.yy.c
 sim/misc/yas-grammar.c
 sim/pipe/psim
 sim/seq/ssim
+*.code-workspace
