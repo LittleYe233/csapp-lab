@@ -1,0 +1,10 @@
+*.yo
+*.o
+sim/misc/yas
+sim/misc/yis
+sim/misc/hcl2c
+sim/misc/hcl.tab.*
+sim/misc/lex.yy.c
+sim/misc/yas-grammar.c
+sim/pipe/psim
+sim/seq/ssim
