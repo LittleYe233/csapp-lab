@@ -1,0 +1,48 @@
+.pos 0
+    irmovq stack, %rsp
+    call main
+    halt
+
+.align 8
+src:
+    .quad 0x00a
+    .quad 0x0b0
+    .quad 0xc00
+dest:
+    .quad 0x111
+    .quad 0x222
+    .quad 0x333
+
+main:
+    irmovq src, %rdi
+    irmovq dest, %rsi
+    irmovq $3, %rdx
+    call copy_block
+    ret
+
+copy_block:
+    # Initialize checksum and others
+    irmovq $0, %rax
+    irmovq $1, %r9
+    irmovq $8, %rcx
+    # Check if %rdx is zero
+    andq %rdx, %rdx
+    jmp copy_block_test
+copy_block_loop:
+    # Copy
+    mrmovq (%rdi), %r8
+    rmmovq %r8, (%rsi)
+    # Move to next element
+    addq %rcx, %rdi
+    addq %rcx, %rsi
+    # Calculate checksum
+    xorq %r8, %rax
+    # Decrement cycle variable
+    subq %r9, %rdx
+copy_block_test:
+    jne copy_block_loop
+    ret
+
+# You should reserve more space for the stack!
+.pos 0x200
+stack:
