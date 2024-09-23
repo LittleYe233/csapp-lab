@@ -14,4 +14,5 @@ sim/seq/ssim
 sim/seq/seq-full.c
 sim/seq/seq-std.c
 sim/seq/seq+-std.c
+sim/ptest/*.ys
 *.code-workspace
