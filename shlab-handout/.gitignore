@@ -1,0 +1,10 @@
+*.code-workspace
+compile_commands.json
+myspin
+mysplit
+mystop
+myint
+tsh
+*.o
+.cache/
+.clang-format
