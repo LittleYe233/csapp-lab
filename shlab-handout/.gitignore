@@ -8,3 +8,4 @@ tsh
 *.o
 .cache/
 .clang-format
+tshref.out
